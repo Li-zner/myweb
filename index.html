@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>To: 亲爱的凤凤</title>
+    <!-- 引入你的外部样式表 -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- 【新增】这里专门用来写爱心的动画效果 -->
+    <style>
+        /* 定义飘落动画的关键帧 */
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg); /* 下落一整屏的高度并旋转 */
+                opacity: 0; /* 到底部时变透明消失 */
+            }
+        }
+
+        /* 给生成的爱心加上基础样式 */
+        .heart {
+            position: fixed; /* 固定定位，不随滚动条移动 */
+            top: -50px;      /* 从屏幕最上方开始 */
+            z-index: 9999;   /* 保证爱心在最上层 */
+            pointer-events: none; /* 鼠标穿透，不影响点击网页上的其他东西 */
+            animation: fall linear forwards; /* 应用上面的动画 */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 可以在这里放一张你们的合照，或者一个爱心图标 -->
+        <div class="heart-icon">❤️</div>
+
+        <h1>To: 亲爱的凤凤</h1>
+
+        <div class="content">
+            <p>这是我写的第一个网页。</p>
+            <p>我想用 HTML 搭建一个空间，<br>用 CSS 描绘你的美丽，<br>用 JavaScript 记录我们每一个开心的瞬间。<br>把绘笔给到你和我，一起书写未来吧！</p>
+        </div>
+
+        <hr style="border: 0; border-top: 1px dashed #ff69b4; margin: 30px 0;">
+
+        <p class="footer-text">南南</p>
+    </div>
+
+    <!-- 【修复】只保留这一段脚本，去掉了重复和错误的标签 -->
+    <script>
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.innerText = '❤'; // 你也可以换成 '🌸' 或者 '✨'
+
+            // 随机位置 (0% 到 100% 的屏幕宽度)
+            heart.style.left = Math.random() * 100 + 'vw';
+
+            // 随机大小 (10px 到 30px)
+            heart.style.fontSize = Math.random() * 20 + 10 + 'px';
+
+            // 随机颜色
+            const colors = ['#ff69b4', '#ff1493', '#db7093', '#ffc0cb'];
+            heart.style.color = colors[Math.floor(Math.random() * colors.length)];
+
+            // 随机下落速度 (2秒 到 5秒)
+            const duration = Math.random() * 3 + 2;
+            heart.style.animationDuration = duration + 's';
+
+            document.body.appendChild(heart);
+
+            // 动画结束后移除元素，防止页面卡顿
+            setTimeout(() => {
+                heart.remove();
+            }, duration * 1000);
+        }
+
+        // 每 300 毫秒生成一颗心
+        setInterval(createHeart, 300);
+    </script>
+</body>
+</html>
