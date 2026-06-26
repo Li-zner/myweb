@@ -21,28 +21,23 @@
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         .typing::after { content: '...'; animation: blink 1.4s infinite both; }
         @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
-    </style>
-
-</head>
-<body>
-    <div class="chat-container">
-        <div class="messages" id="messages">
-            <div class="msg ai">你好！我是 TourBox 官方智能助手，请问有什么可以帮您？</div>
-        </div>
-        <div class="input-area">
-            <input type="text" id="userInput" placeholder="输入问题，如：指哪调哪怎么设置？" autocomplete="off">
-            <button id="sendBtn">发送</button>
-        </div>
-    </div>
-
-<script>
-    const DIFY_API_URL = 'https://d83dcb7819ec4dc896dee02bfef2f1dc.hn.takin.cc';
-    const DIFY_API_KEY = 'app-9lEt4pd9j9ZTO5ImW1aiELLg';  
-
+   <script>
     const messagesDiv = document.getElementById('messages');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
-    let conversationId = '';
+
+    // 模拟回复库（你可以自己改内容）
+    const mockReplies = [
+        '感谢您的提问！TourBox 支持指哪调哪功能，您可以在驱动软件中自定义按键映射。',
+        '关于您的问题，建议您先检查 USB 连接是否稳定，然后重启驱动软件。',
+        'TourBox 的快捷预设功能可以让您一键切换不同软件的配置，非常方便！',
+        '如果您遇到驱动识别问题，请尝试更换 USB 接口或重新安装驱动。',
+        'TourBox 支持 Win 和 Mac 双平台，您可以放心使用。'
+    ];
+
+    function getRandomReply() {
+        return mockReplies[Math.floor(Math.random() * mockReplies.length)];
+    }
 
     function linkify(text) {
         return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
@@ -52,66 +47,27 @@
         const query = userInput.value.trim();
         if (!query) return;
 
+        // 显示用户消息
         messagesDiv.innerHTML += `<div class="msg user">${query}</div>`;
         userInput.value = '';
         sendBtn.disabled = true;
 
+        // 创建 AI 占位消息
         const aiMsgId = 'ai-' + Date.now();
         messagesDiv.innerHTML += `<div class="msg ai typing" id="${aiMsgId}"></div>`;
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-        try {
-            // ✅ 这是标准的 fetch 写法，绝对没有语法错误
-            const response = await fetch(DIFY_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${DIFY_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    inputs: {},
-                    query: query,
-                    response_mode: 'streaming',
-                    user: 'user-001',
-                    conversation_id: conversationId
-                })
-            });
+        // 模拟延迟（让回复感觉像真的在思考）
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 600));
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-            }
+        // 显示模拟回复
+        const reply = getRandomReply();
+        document.getElementById(aiMsgId).innerHTML = linkify(reply);
+        document.getElementById(aiMsgId).classList.remove('typing');
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullText = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n').filter(line => line.startsWith('data:'));
-                for (const line of lines) {
-                    try {
-                        const json = JSON.parse(line.substring(5).trim());
-                        if (json.answer) {
-                            fullText += json.answer;
-                            document.getElementById(aiMsgId).innerHTML = linkify(fullText);
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                        }
-                        if (json.conversation_id) {
-                            conversationId = json.conversation_id;
-                        }
-                    } catch (e) {}
-                }
-            }
-            document.getElementById(aiMsgId).classList.remove('typing');
-        } catch (error) {
-            document.getElementById(aiMsgId).innerText = '⚠️ ' + error.message;
-            document.getElementById(aiMsgId).classList.remove('typing');
-        } finally {
-            sendBtn.disabled = false;
-            userInput.focus();
-        }
+        sendBtn.disabled = false;
+        userInput.focus();
     }
 
     sendBtn.addEventListener('click', sendMessage);
