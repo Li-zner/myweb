@@ -74,12 +74,19 @@
 
         try {
             // 3. 调用 Dify SSE 流式接口
-            const DIFY_API_URL = 'https://api.dify.ai/v1/chat-messages'; 
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer app-51TMeNX1Jwh310mZ3Erw9JVF', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ inputs: {}, query, response_mode: 'streaming', conversation_id: conversationId, user: 'web-demo' })
-            });
-
+const response = await fetch('https://api.dify.ai/v1/chat-messages', {
+    method: 'POST',
+    headers: {
+        'Authorization': 'Bearer app-51TMeNX1Jwh310mZ3Erw9JVF',
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        inputs: {},
+        query: '你好',
+        response_mode: 'blocking',
+        user: 'user-001'
+    })
+});
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let fullText = '';
