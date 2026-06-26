@@ -1,85 +1,122 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>To: 亲爱的凤凤</title>
-    <!-- 引入你的外部样式表 -->
-    <link rel="stylesheet" href="style.css" />
-
-    <!-- 【新增】这里专门用来写爱心的动画效果 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TourBox 智能助手</title>
     <style>
-        /* 定义飘落动画的关键帧 */
-        @keyframes fall {
-            0% {
-                transform: translateY(0) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(100vh) rotate(360deg); /* 下落一整屏的高度并旋转 */
-                opacity: 0; /* 到底部时变透明消失 */
-            }
-        }
-
-        /* 给生成的爱心加上基础样式 */
-        .heart {
-            position: fixed; /* 固定定位，不随滚动条移动 */
-            top: -50px;      /* 从屏幕最上方开始 */
-            z-index: 9999;   /* 保证爱心在最上层 */
-            pointer-events: none; /* 鼠标穿透，不影响点击网页上的其他东西 */
-            animation: fall linear forwards; /* 应用上面的动画 */
-        }
+        :root { --tb-orange: #FF6B35; --bg-color: #f9fafb; --chat-bg: #ffffff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg-color); display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        /* 聊天容器 */
+        .chat-container { width: 100%; max-width: 480px; height: 90vh; background: var(--chat-bg); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* 消息列表区 */
+        .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.6; font-size: 14px; word-break: break-word; }
+        .msg.user { align-self: flex-end; background: var(--tb-orange); color: white; border-bottom-right-radius: 4px; }
+        .msg.ai { align-self: flex-start; background: #f3f4f6; color: #1f2937; border-bottom-left-radius: 4px; }
+        .msg.ai a { color: var(--tb-orange); text-decoration: underline; }
+        
+        /* 输入区 */
+        .input-area { padding: 16px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; background: #fff; }
+        input { flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 24px; outline: none; transition: border 0.2s; }
+        input:focus { border-color: var(--tb-orange); }
+        button { padding: 0 24px; background: var(--tb-orange); color: white; border: none; border-radius: 24px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        /* 加载动画 */
+        .typing::after { content: '...'; animation: blink 1.4s infinite both; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <!-- 可以在这里放一张你们的合照，或者一个爱心图标 -->
-        <div class="heart-icon">❤️</div>
-
-        <h1>To: 亲爱的凤凤</h1>
-
-        <div class="content">
-            <p>这是我写的第一个网页。</p>
-            <p>我想用 HTML 搭建一个空间，<br>用 CSS 描绘你的美丽，<br>用 JavaScript 记录我们每一个开心的瞬间。<br>把绘笔给到你和我，一起书写未来吧！</p>
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="msg ai">你好！我是 TourBox 官方智能助手，请问有什么可以帮您？</div>
         </div>
-
-        <hr style="border: 0; border-top: 1px dashed #ff69b4; margin: 30px 0;">
-
-        <p class="footer-text">南南</p>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="输入问题，如：指哪调哪怎么设置？" autocomplete="off">
+            <button id="sendBtn">发送</button>
+        </div>
     </div>
 
-    <!-- 【修复】只保留这一段脚本，去掉了重复和错误的标签 -->
-    <script>
-        function createHeart() {
-            const heart = document.createElement('div');
-            heart.classList.add('heart');
-            heart.innerText = '❤'; // 你也可以换成 '🌸' 或者 '✨'
+<script>
+    // ⚠️ 配置区：替换为你的真实 API 信息
+    const DIFY_API_URL = 'https://api.dify.ai/v1/chat-messages'; 
+    const DIFY_API_KEY = 'app-你的API密钥'; 
 
-            // 随机位置 (0% 到 100% 的屏幕宽度)
-            heart.style.left = Math.random() * 100 + 'vw';
+    const messagesDiv = document.getElementById('messages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    let conversationId = ''; // Dify 多轮对话 ID
 
-            // 随机大小 (10px 到 30px)
-            heart.style.fontSize = Math.random() * 20 + 10 + 'px';
+    // 自动将文本中的 URL 转换为可点击链接
+    function linkify(text) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    }
 
-            // 随机颜色
-            const colors = ['#ff69b4', '#ff1493', '#db7093', '#ffc0cb'];
-            heart.style.color = colors[Math.floor(Math.random() * colors.length)];
+    async function sendMessage() {
+        const query = userInput.value.trim();
+        if (!query) return;
 
-            // 随机下落速度 (2秒 到 5秒)
-            const duration = Math.random() * 3 + 2;
-            heart.style.animationDuration = duration + 's';
+        // 1. 渲染用户消息
+        messagesDiv.innerHTML += `<div class="msg user">${query}</div>`;
+        userInput.value = '';
+        sendBtn.disabled = true;
 
-            document.body.appendChild(heart);
+        // 2. 创建 AI 占位消息
+        const aiMsgId = 'ai-' + Date.now();
+        messagesDiv.innerHTML += `<div class="msg ai typing" id="${aiMsgId}"></div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            // 动画结束后移除元素，防止页面卡顿
-            setTimeout(() => {
-                heart.remove();
-            }, duration * 1000);
+        try {
+            // 3. 调用 Dify SSE 流式接口
+            const response = await fetch(DIFY_API_URL, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${DIFY_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inputs: {}, query, response_mode: 'streaming', conversation_id: conversationId, user: 'web-demo' })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                // 解析 SSE data 格式
+                const lines = chunk.split('\n').filter(line => line.startsWith('data:'));
+                for (const line of lines) {
+                    try {
+                        const json = JSON.parse(line.substring(5));
+                        if (json.answer) {
+                            fullText += json.answer;
+                            document.getElementById(aiMsgId).innerHTML = linkify(fullText);
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        }
+                        if (json.conversation_id) conversationId = json.conversation_id;
+                    } catch (e) { /* 忽略非 JSON 行 */ }
+                }
+            }
+            // 移除打字机样式
+            document.getElementById(aiMsgId).classList.remove('typing');
+        } catch (error) {
+            document.getElementById(aiMsgId).innerText = '网络异常，请稍后重试';
+            console.error(error);
+        } finally {
+            sendBtn.disabled = false;
+            userInput.focus();
         }
+    }
 
-        // 每 300 毫秒生成一颗心
-        setInterval(createHeart, 300);
-    </script>
+    // 绑定事件
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+</script>
 </body>
 </html>
